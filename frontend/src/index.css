@@ -1,0 +1,470 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ========================================
+   Custom Scrollbar
+   ======================================== */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #1e293b;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #475569;
+  border-radius: 4px;
+  transition: background 0.3s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+/* ========================================
+   Metric Card Hover - STRONG GLOW
+   ======================================== */
+.metric-card {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.metric-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.1),
+    transparent
+  );
+  transition: left 0.5s ease;
+}
+
+.metric-card:hover::before {
+  left: 100%;
+}
+
+/* Blue Glow */
+.metric-card.glow-blue:hover {
+  box-shadow: 0 0 30px rgba(59, 130, 246, 0.4),
+              0 0 60px rgba(59, 130, 246, 0.2),
+              0 10px 40px rgba(0, 0, 0, 0.3) !important;
+  border-color: rgba(59, 130, 246, 0.5) !important;
+  transform: translateY(-5px);
+}
+
+/* Green Glow */
+.metric-card.glow-green:hover {
+  box-shadow: 0 0 30px rgba(34, 197, 94, 0.4),
+              0 0 60px rgba(34, 197, 94, 0.2),
+              0 10px 40px rgba(0, 0, 0, 0.3) !important;
+  border-color: rgba(34, 197, 94, 0.5) !important;
+  transform: translateY(-5px);
+}
+
+/* Red Glow */
+.metric-card.glow-red:hover {
+  box-shadow: 0 0 30px rgba(239, 68, 68, 0.4),
+              0 0 60px rgba(239, 68, 68, 0.2),
+              0 10px 40px rgba(0, 0, 0, 0.3) !important;
+  border-color: rgba(239, 68, 68, 0.5) !important;
+  transform: translateY(-5px);
+}
+
+/* Yellow Glow */
+.metric-card.glow-yellow:hover {
+  box-shadow: 0 0 30px rgba(234, 179, 8, 0.4),
+              0 0 60px rgba(234, 179, 8, 0.2),
+              0 10px 40px rgba(0, 0, 0, 0.3) !important;
+  border-color: rgba(234, 179, 8, 0.5) !important;
+  transform: translateY(-5px);
+}
+
+/* Orange Glow */
+.metric-card.glow-orange:hover {
+  box-shadow: 0 0 30px rgba(249, 115, 22, 0.4),
+              0 0 60px rgba(249, 115, 22, 0.2),
+              0 10px 40px rgba(0, 0, 0, 0.3) !important;
+  border-color: rgba(249, 115, 22, 0.5) !important;
+  transform: translateY(-5px);
+}
+
+/* Purple Glow */
+.metric-card.glow-purple:hover {
+  box-shadow: 0 0 30px rgba(168, 85, 247, 0.4),
+              0 0 60px rgba(168, 85, 247, 0.2),
+              0 10px 40px rgba(0, 0, 0, 0.3) !important;
+  border-color: rgba(168, 85, 247, 0.5) !important;
+  transform: translateY(-5px);
+}
+
+/* Cyan Glow */
+.metric-card.glow-cyan:hover {
+  box-shadow: 0 0 30px rgba(6, 182, 212, 0.4),
+              0 0 60px rgba(6, 182, 212, 0.2),
+              0 10px 40px rgba(0, 0, 0, 0.3) !important;
+  border-color: rgba(6, 182, 212, 0.5) !important;
+  transform: translateY(-5px);
+}
+
+/* Indigo Glow */
+.metric-card.glow-indigo:hover {
+  box-shadow: 0 0 30px rgba(99, 102, 241, 0.4),
+              0 0 60px rgba(99, 102, 241, 0.2),
+              0 10px 40px rgba(0, 0, 0, 0.3) !important;
+  border-color: rgba(99, 102, 241, 0.5) !important;
+  transform: translateY(-5px);
+}
+
+/* ========================================
+   Status Card Hover - STRONG GLOW
+   ======================================== */
+.status-card {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.status-card.glow-green:hover {
+  box-shadow: 0 0 25px rgba(34, 197, 94, 0.4),
+              0 5px 20px rgba(0, 0, 0, 0.2) !important;
+  transform: translateY(-4px) scale(1.02);
+}
+
+.status-card.glow-red:hover {
+  box-shadow: 0 0 25px rgba(239, 68, 68, 0.4),
+              0 5px 20px rgba(0, 0, 0, 0.2) !important;
+  transform: translateY(-4px) scale(1.02);
+}
+
+.status-card.glow-yellow:hover {
+  box-shadow: 0 0 25px rgba(234, 179, 8, 0.4),
+              0 5px 20px rgba(0, 0, 0, 0.2) !important;
+  transform: translateY(-4px) scale(1.02);
+}
+
+.status-card.glow-blue:hover {
+  box-shadow: 0 0 25px rgba(59, 130, 246, 0.4),
+              0 5px 20px rgba(0, 0, 0, 0.2) !important;
+  transform: translateY(-4px) scale(1.02);
+}
+
+/* ========================================
+   Row Hover with Glow
+   ======================================== */
+.table-row-hover {
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+.table-row-hover::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  width: 3px;
+  background: linear-gradient(180deg, #3b82f6, #8b5cf6);
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+.table-row-hover:hover {
+  background: linear-gradient(90deg, rgba(59, 130, 246, 0.15), rgba(139, 92, 246, 0.08), transparent) !important;
+}
+
+.table-row-hover:hover::before {
+  opacity: 1;
+}
+
+/* ========================================
+   Panel Hover with Glow
+   ======================================== */
+.panel-hover {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.panel-hover:hover {
+  box-shadow: 0 0 40px rgba(59, 130, 246, 0.15),
+              0 0 80px rgba(139, 92, 246, 0.08),
+              0 15px 50px rgba(0, 0, 0, 0.25) !important;
+  border-color: rgba(59, 130, 246, 0.3) !important;
+}
+
+/* ========================================
+   Chart Container Hover
+   ======================================== */
+.chart-hover {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.chart-hover:hover {
+  box-shadow: 0 0 50px rgba(59, 130, 246, 0.2),
+              0 20px 60px rgba(0, 0, 0, 0.3) !important;
+  border-color: rgba(59, 130, 246, 0.3) !important;
+}
+
+/* ========================================
+   Input Focus Glow
+   ======================================== */
+.input-glow {
+  transition: all 0.3s ease;
+}
+
+.input-glow:focus {
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3),
+              0 0 20px rgba(59, 130, 246, 0.3) !important;
+  border-color: #3b82f6 !important;
+  outline: none;
+}
+
+/* ========================================
+   Table Header Hover
+   ======================================== */
+.th-hover {
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.th-hover:hover {
+  color: #60a5fa !important;
+  background: rgba(59, 130, 246, 0.1);
+}
+
+/* ========================================
+   Usage Bar Hover
+   ======================================== */
+.usage-card {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.usage-card:hover {
+  transform: scale(1.02);
+  box-shadow: 0 5px 25px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* ========================================
+   Progress Bar Glow
+   ======================================== */
+.progress-bar-green {
+  background: linear-gradient(90deg, #22c55e, #10b981);
+  box-shadow: 0 0 15px rgba(34, 197, 94, 0.5);
+}
+
+.progress-bar-yellow {
+  background: linear-gradient(90deg, #eab308, #f97316);
+  box-shadow: 0 0 15px rgba(234, 179, 8, 0.5);
+}
+
+.progress-bar-red {
+  background: linear-gradient(90deg, #ef4444, #dc2626);
+  box-shadow: 0 0 15px rgba(239, 68, 68, 0.5);
+}
+
+/* ========================================
+   Live Pulse Animation
+   ======================================== */
+.live-pulse {
+  animation: livePulse 2s ease-in-out infinite;
+}
+
+@keyframes livePulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 10px rgba(34, 197, 94, 0);
+  }
+}
+
+/* ========================================
+   Shimmer Effect
+   ======================================== */
+.shimmer {
+  background: linear-gradient(90deg, #1e293b 0%, #334155 50%, #1e293b 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+/* ========================================
+   Terminal Styles
+   ======================================== */
+
+/* Terminal Container */
+.terminal-container {
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  background: #0a0a0a;
+}
+
+/* Terminal Log Row Base */
+.terminal-row {
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  border-left: 2px solid transparent;
+}
+
+/* Terminal Text Colors - IMPORTANT: Use !important to override */
+.terminal-text-green {
+  color: #4ade80 !important;
+}
+
+.terminal-text-red {
+  color: #f87171 !important;
+}
+
+.terminal-text-yellow {
+  color: #facc15 !important;
+}
+
+.terminal-text-gray {
+  color: #94a3b8 !important;
+}
+
+.terminal-text-timestamp {
+  color: #64748b !important;
+}
+
+/* Terminal Row Hover Effects */
+.terminal-row:hover {
+  background: linear-gradient(90deg, rgba(74, 222, 128, 0.1), transparent);
+  border-left-color: #4ade80;
+  box-shadow: 0 0 20px rgba(74, 222, 128, 0.3), inset 0 0 25px rgba(74, 222, 128, 0.05);
+}
+
+/* Ensure message text turns white on hover (all types) */
+.terminal-row:hover .terminal-text-message {
+  color: #ffffff !important;
+  text-shadow: 0 0 10px currentColor;
+}
+
+/* Error Row */
+.terminal-row-error {
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  border-left: 2px solid transparent;
+}
+
+.terminal-row-error:hover {
+  background: linear-gradient(90deg, rgba(248, 113, 113, 0.15), transparent) !important;
+  border-left-color: #f87171 !important;
+  box-shadow: 0 0 25px rgba(239, 68, 68, 0.4), inset 0 0 30px rgba(239, 68, 68, 0.08) !important;
+}
+
+.terminal-row-error:hover .terminal-text-red,
+.terminal-row-error:hover .terminal-text-message {
+  color: #ffffff !important;
+  text-shadow: 0 0 10px rgba(248, 113, 113, 0.6);
+}
+
+/* Warning Row */
+.terminal-row-warning {
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  border-left: 2px solid transparent;
+}
+
+.terminal-row-warning:hover {
+  background: linear-gradient(90deg, rgba(250, 204, 21, 0.15), transparent) !important;
+  border-left-color: #facc15 !important;
+  box-shadow: 0 0 25px rgba(234, 179, 8, 0.4), inset 0 0 30px rgba(234, 179, 8, 0.08) !important;
+}
+
+.terminal-row-warning:hover .terminal-text-yellow,
+.terminal-row-warning:hover .terminal-text-message {
+  color: #ffffff !important;
+  text-shadow: 0 0 10px rgba(250, 204, 21, 0.6);
+}
+
+/* Success/Info Row */
+.terminal-row-success,
+.terminal-row-info {
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  border-left: 2px solid transparent;
+}
+
+.terminal-row-success:hover,
+.terminal-row-info:hover {
+  background: linear-gradient(90deg, rgba(74, 222, 128, 0.15), transparent) !important;
+  border-left-color: #4ade80 !important;
+  box-shadow: 0 0 25px rgba(34, 197, 94, 0.4), inset 0 0 30px rgba(34, 197, 94, 0.08) !important;
+}
+
+.terminal-row-success:hover .terminal-text-green,
+.terminal-row-success:hover .terminal-text-message,
+.terminal-row-info:hover .terminal-text-green,
+.terminal-row-info:hover .terminal-text-message {
+  color: #ffffff !important;
+  text-shadow: 0 0 10px rgba(74, 222, 128, 0.6);
+}
+
+/* Debug Row */
+.terminal-row-debug {
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  border-left: 2px solid transparent;
+}
+
+.terminal-row-debug:hover {
+  background: linear-gradient(90deg, rgba(148, 163, 184, 0.1), transparent) !important;
+  border-left-color: #94a3b8 !important;
+  box-shadow: 0 0 20px rgba(148, 163, 184, 0.3), inset 0 0 25px rgba(148, 163, 184, 0.05) !important;
+}
+
+.terminal-row-debug:hover .terminal-text-gray,
+.terminal-row-debug:hover .terminal-text-message {
+  color: #e2e8f0 !important;
+  text-shadow: 0 0 8px rgba(148, 163, 184, 0.4);
+}
+
+/* Terminal Scrollbar */
+.terminal-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.terminal-scrollbar::-webkit-scrollbar-track {
+  background: #0a0a0a;
+}
+
+.terminal-scrollbar::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 3px;
+}
+
+.terminal-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
+/* Blinking Cursor */
+.terminal-cursor {
+  animation: terminalBlink 1s step-end infinite;
+}
+
+@keyframes terminalBlink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+/* Live Indicator Pulse */
+.terminal-live-dot {
+  animation: livePulse 2s ease-in-out infinite;
+  box-shadow: 0 0 8px rgba(34, 197, 94, 0.8);
+}
+
+@keyframes livePulse {
+  0%, 100% { 
+    opacity: 1;
+    box-shadow: 0 0 8px rgba(34, 197, 94, 0.8);
+  }
+  50% { 
+    opacity: 0.6;
+    box-shadow: 0 0 15px rgba(34, 197, 94, 1);
+  }
+}

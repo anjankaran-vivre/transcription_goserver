@@ -1,0 +1,53 @@
+import axios from 'axios';
+
+const api = axios.create({
+  baseURL: '',
+  timeout: 10000,
+});
+
+export const getStatus = async () => {
+  const response = await api.get('/api/status');
+  return response.data;
+};
+
+export const getMetrics = async () => {
+  const response = await api.get('/api/metrics');
+  return response.data;
+};
+
+export const getCalls = async (limit = 50) => {
+  const response = await api.get(`/api/calls?limit=${limit}`);
+  return response.data;
+};
+
+export const getLogs = async (limit = 100) => {
+  const response = await api.get(`/api/logs?limit=${limit}`);
+  return response.data;
+};
+
+export const getProcessing = async () => {
+  const response = await api.get('/api/processing');
+  return response.data;
+};
+
+export const restartServer = async () => {
+  const response = await api.post('/admin/restart');
+  return response.data;
+};
+
+export const stopServer = async () => {
+  const response = await api.post('/admin/stop');
+  return response.data;
+};
+
+export const clearQueue = async () => {
+  const response = await api.post('/admin/clear-queue');
+  return response.data;
+};
+
+export const testEmail = async () => {
+  const response = await api.post('/admin/test-email');
+  return response.data;
+};
+
+export default api;
