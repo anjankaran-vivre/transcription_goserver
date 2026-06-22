@@ -1,65 +1,132 @@
 package socketio
 
 import (
+	"encoding/json"
 	"fmt"
+	"net/http"
+	"sync"
 	"time"
 
-	socketio "github.com/googollee/go-socket.io"
+	"github.com/gorilla/websocket"
+	"github.com/gin-gonic/gin"
 
 	"transcription-goserver/internal/logging"
 )
 
-var Server *socketio.Server
+var upgrader = websocket.Upgrader{
+	CheckOrigin: func(r *http.Request) bool {
+		return true
+	},
+}
 
-func InitSocketIO() *socketio.Server {
-	Server = socketio.NewServer(nil)
+type wsMessage struct {
+	Type string      `json:"type"`
+	Data interface{} `json:"data,omitempty"`
+}
 
-	Server.OnConnect("/", func(s socketio.Conn) error {
-		s.SetContext("")
-		s.Join("all")
-		fmt.Printf("[SocketIO] Client connected: %s\n", s.ID())
-		logging.GetLogStreamer().Info("SocketIO", fmt.Sprintf("Client %s connected", s.ID()))
-		return nil
-	})
+type client struct {
+	conn *websocket.Conn
+	send chan []byte
+}
 
-	Server.OnEvent("/", "request_logs", func(s socketio.Conn, msg string) {
-		fmt.Printf("[SocketIO] Client %s requested logs\n", s.ID())
-		logStreamer := logging.GetLogStreamer()
-		logs := logStreamer.GetRecentLogs(50)
+var (
+	clients   = make(map[*client]bool)
+	clientsMu sync.RWMutex
+)
 
-		formattedLogs := make([]map[string]interface{}, 0)
-		for _, l := range logs {
-			formattedLogs = append(formattedLogs, map[string]interface{}{
-				"timestamp": l.Timestamp,
-				"level":     l.Level,
-				"component": l.Component,
-				"message":   l.Message,
-			})
+func HandleWS(c *gin.Context) {
+	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
+	if err != nil {
+		fmt.Printf("[WS] Upgrade error: %v\n", err)
+		return
+	}
+
+	cl := &client{conn: conn, send: make(chan []byte, 256)}
+	clientsMu.Lock()
+	clients[cl] = true
+	clientsMu.Unlock()
+
+	fmt.Printf("[WS] Client connected (%d total)\n", len(clients))
+	logging.GetLogStreamer().Info("WS", fmt.Sprintf("Client connected (%d total)", len(clients)))
+
+	go cl.writePump()
+	go cl.readPump()
+}
+
+func (c *client) readPump() {
+	defer func() {
+		c.conn.Close()
+		clientsMu.Lock()
+		delete(clients, c)
+		clientsMu.Unlock()
+		fmt.Printf("[WS] Client disconnected (%d remaining)\n", len(clients))
+	}()
+
+	for {
+		_, msg, err := c.conn.ReadMessage()
+		if err != nil {
+			break
 		}
 
-		s.Emit("log_history", formattedLogs)
-		fmt.Printf("[SocketIO] Sent %d logs to %s\n", len(formattedLogs), s.ID())
-	})
+		var req wsMessage
+		if json.Unmarshal(msg, &req) != nil {
+			continue
+		}
 
-	Server.OnError("/", func(s socketio.Conn, e error) {
-		fmt.Printf("[SocketIO] Error: %v\n", e)
-	})
+		if req.Type == "request_logs" {
+			logStreamer := logging.GetLogStreamer()
+			logs := logStreamer.GetRecentLogs(50)
+			data, _ := json.Marshal(wsMessage{
+				Type: "log_history",
+				Data: logs,
+			})
+			c.send <- data
+		}
+	}
+}
 
-	Server.OnDisconnect("/", func(s socketio.Conn, reason string) {
-		fmt.Printf("[SocketIO] Client disconnected: %s\n", s.ID())
-		logging.GetLogStreamer().Info("SocketIO", fmt.Sprintf("Client %s disconnected", s.ID()))
-	})
+func (c *client) writePump() {
+	ticker := time.NewTicker(30 * time.Second)
+	defer func() {
+		ticker.Stop()
+		c.conn.Close()
+	}()
 
-	go Server.Serve()
-
-	return Server
+	for {
+		select {
+		case msg, ok := <-c.send:
+			if !ok {
+				c.conn.WriteMessage(websocket.CloseMessage, []byte{})
+				return
+			}
+			c.conn.WriteMessage(websocket.TextMessage, msg)
+		case <-ticker.C:
+			c.conn.WriteMessage(websocket.PingMessage, nil)
+		}
+	}
 }
 
 func BroadcastLog(level, component, message string) {
-	Server.BroadcastToRoom("/", "all", "log_message", map[string]interface{}{
-		"timestamp": time.Now().Format(time.RFC3339),
-		"level":     level,
-		"component": component,
-		"message":   message,
+	data, err := json.Marshal(wsMessage{
+		Type: "log_message",
+		Data: map[string]string{
+			"timestamp": time.Now().Format("15:04:05"),
+			"level":     level,
+			"component": component,
+			"message":   message,
+		},
 	})
+	if err != nil {
+		return
+	}
+
+	clientsMu.RLock()
+	defer clientsMu.RUnlock()
+
+	for cl := range clients {
+		select {
+		case cl.send <- data:
+		default:
+		}
+	}
 }

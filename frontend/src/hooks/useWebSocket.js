@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { io } from 'socket.io-client'
 
 export const useWebSocket = () => {
   const socketRef = useRef(null)
@@ -7,45 +6,47 @@ export const useWebSocket = () => {
   const [logs, setLogs] = useState([])
 
   const connect = useCallback(() => {
-    if (socketRef.current?.connected) return
+    if (socketRef.current?.readyState === WebSocket.OPEN) return
 
-    socketRef.current = io(window.location.origin, {
-      path: '/socket.io',
-      transports: ['polling', 'websocket'],
-      reconnection: true,
-      reconnectionAttempts: 10,
-      reconnectionDelay: 1000,
-      timeout: 20000,
-    })
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+    const wsUrl = `${protocol}//${window.location.host}/ws`
 
-    socketRef.current.on('connect', () => {
+    const ws = new WebSocket(wsUrl)
+    socketRef.current = ws
+
+    ws.onopen = () => {
       console.log('WebSocket connected')
       setIsConnected(true)
-      socketRef.current.emit('request_logs')
-    })
+      ws.send(JSON.stringify({ type: 'request_logs' }))
+    }
 
-    socketRef.current.on('disconnect', () => {
+    ws.onclose = () => {
       console.log('WebSocket disconnected')
       setIsConnected(false)
-    })
+      setTimeout(connect, 1000)
+    }
 
-    socketRef.current.on('log_message', (log) => {
-      setLogs(prev => [...prev.slice(-499), log])
-    })
+    ws.onmessage = (event) => {
+      try {
+        const msg = JSON.parse(event.data)
+        if (msg.type === 'log_history') {
+          setLogs(Array.isArray(msg.data) ? msg.data : [])
+        } else if (msg.type === 'log_message') {
+          setLogs(prev => [...prev.slice(-499), msg.data])
+        }
+      } catch (e) {
+        console.error('WebSocket message error:', e)
+      }
+    }
 
-    // ✅ FIXED HERE
-    socketRef.current.on('log_history', (history) => {
-      setLogs(Array.isArray(history) ? history : [])
-    })
-
-    socketRef.current.on('connect_error', (error) => {
-      console.error('WebSocket error:', error)
+    ws.onerror = (err) => {
+      console.error('WebSocket error:', err)
       setIsConnected(false)
-    })
+    }
   }, [])
 
   const disconnect = useCallback(() => {
-    socketRef.current?.disconnect()
+    socketRef.current?.close()
     socketRef.current = null
   }, [])
 

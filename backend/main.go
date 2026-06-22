@@ -35,11 +35,7 @@ func main() {
 	// Initialize task queue
 	controllers.InitTaskQueue(1000)
 
-	// Initialize Socket.IO
-	sio := socketio.InitSocketIO()
-	defer sio.Close()
-
-	// Connect LogStreamer to Socket.IO broadcast
+	// Connect LogStreamer to WebSocket broadcast
 	logStreamer := logging.GetLogStreamer()
 	logStreamer.SetBroadcastFunc(socketio.BroadcastLog)
 
@@ -62,8 +58,8 @@ func main() {
 		AllowCredentials: true,
 	}))
 
-	// Socket.IO handler - catch all methods on /socket.io/
-	r.Any("/socket.io/*any", gin.WrapH(sio))
+	// WebSocket endpoint
+	r.GET("/ws", socketio.HandleWS)
 
 	// REST API routes
 	api := r.Group("/api")
