@@ -82,15 +82,15 @@ func main() {
 	fmt.Println("=" + strings.Repeat("=", 59))
 	fmt.Printf("  API:       http://%s:%d\n", cfg.Host, cfg.Port)
 	fmt.Printf("  Dashboard: http://localhost:3000\n")
-	fmt.Printf("  Socket.IO: ws://%s:%d/socket.io\n", cfg.Host, cfg.Port)
+	fmt.Printf("  WebSocket: ws://%s:%d/ws\n", cfg.Host, cfg.Port)
 	fmt.Println("=" + strings.Repeat("=", 59))
 	fmt.Println("  ✓ Gin with goroutine workers")
-	fmt.Println("  ✓ Socket.IO for live logs")
+	fmt.Println("  ✓ WebSocket for live logs")
 	fmt.Println("  ✓ MSSQL database logging")
 	fmt.Println("  Press Ctrl+C to stop")
 	fmt.Println("=" + strings.Repeat("=", 59))
 
-	logStreamer.Info("Main", "Server started with Gin + Socket.IO")
+	logStreamer.Info("Main", "Server started with Gin + WebSocket")
 
 	// Create HTTP server
 	srv := &http.Server{

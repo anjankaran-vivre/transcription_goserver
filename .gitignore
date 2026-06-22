@@ -3,6 +3,5 @@ data\
 logs
 dist
 node_modules
-config
 server.exe
 *.exe
