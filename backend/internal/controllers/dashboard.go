@@ -3,7 +3,6 @@ package controllers
 import (
 	"fmt"
 	"os"
-	"runtime"
 
 	"transcription-goserver/internal/config"
 	"transcription-goserver/internal/logging"
@@ -16,10 +15,6 @@ func (dc *DashboardController) GetServerStatus() StatusResponse {
 	callTracker := models.GetCallTracker()
 	logStreamer := logging.GetLogStreamer()
 
-	var m runtime.MemStats
-	runtime.ReadMemStats(&m)
-	memoryMB := float64(m.Alloc) / 1024 / 1024
-
 	queueSize := len(TaskQueue)
 
 	resp := StatusResponse{
@@ -27,7 +22,7 @@ func (dc *DashboardController) GetServerStatus() StatusResponse {
 		Uptime:     callTracker.GetUptime(),
 		Workers:    config.Settings.NumWorkers,
 		QueueSize:  queueSize,
-		MemoryMB:   memoryMB,
+		MemoryMB:   0,
 		CPUPercent: 0,
 		PID:        os.Getpid(),
 	}

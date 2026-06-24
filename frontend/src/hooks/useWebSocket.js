@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { io } from 'socket.io-client'
+import io from 'socket.io-client'
 
 export const useWebSocket = () => {
   const socketRef = useRef(null)

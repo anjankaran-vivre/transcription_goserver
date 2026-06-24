@@ -62,9 +62,6 @@ func main() {
 		AllowCredentials: true,
 	}))
 
-	// Socket.IO handler - catch all methods on /socket.io/
-	r.Any("/socket.io/*any", gin.WrapH(sio))
-
 	// REST API routes
 	api := r.Group("/api")
 	routes.SetupDashboardRoutes(api)
@@ -73,6 +70,20 @@ func main() {
 	routes.SetupAdminRoutes(admin)
 
 	routes.SetupTranscriptionRoutes(r.Group("/"))
+
+	// Run Socket.IO on separate port 5052 so it never blocks main API
+	go func() {
+		sioMux := http.NewServeMux()
+		sioMux.Handle("/socket.io/", sio)
+		sioServer := &http.Server{
+			Addr:    fmt.Sprintf("%s:5052", cfg.Host),
+			Handler: sioMux,
+		}
+		fmt.Printf("  Socket.IO: ws://%s:5052/socket.io\n", cfg.Host)
+		if err := sioServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Printf("Socket.IO server error: %v", err)
+		}
+	}()
 
 	// Print banner
 	fmt.Println("=" + strings.Repeat("=", 59))
@@ -86,10 +97,10 @@ func main() {
 	fmt.Println("=" + strings.Repeat("=", 59))
 	fmt.Printf("  API:       http://%s:%d\n", cfg.Host, cfg.Port)
 	fmt.Printf("  Dashboard: http://localhost:3000\n")
-	fmt.Printf("  Socket.IO: ws://%s:%d/socket.io\n", cfg.Host, cfg.Port)
+	fmt.Printf("  Socket.IO: ws://%s:5052/socket.io\n", cfg.Host)
 	fmt.Println("=" + strings.Repeat("=", 59))
 	fmt.Println("  ✓ Gin with goroutine workers")
-	fmt.Println("  ✓ Socket.IO for live logs")
+	fmt.Println("  ✓ Socket.IO on separate port 5052")
 	fmt.Println("  ✓ MSSQL database logging")
 	fmt.Println("  Press Ctrl+C to stop")
 	fmt.Println("=" + strings.Repeat("=", 59))

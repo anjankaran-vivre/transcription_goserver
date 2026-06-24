@@ -7,7 +7,7 @@ import (
 )
 
 type CallTracker struct {
-	mu         sync.Mutex
+	mu         sync.RWMutex
 	processing map[string]bool
 	completed  map[string]bool
 	failed     map[string]bool
@@ -16,6 +16,8 @@ type CallTracker struct {
 
 var globalCallTracker *CallTracker
 var callTrackerOnce sync.Once
+
+const maxTrackedCalls = 1000
 
 func GetCallTracker() *CallTracker {
 	callTrackerOnce.Do(func() {
@@ -44,34 +46,57 @@ func (ct *CallTracker) MarkCompleted(callID string, success bool) {
 	defer ct.mu.Unlock()
 	delete(ct.processing, callID)
 	if success {
+		// Cap completed map to prevent unbounded growth
+		if len(ct.completed) >= maxTrackedCalls {
+			// Remove oldest entries by clearing half the map
+			count := 0
+			for k := range ct.completed {
+				delete(ct.completed, k)
+				count++
+				if count >= maxTrackedCalls/2 {
+					break
+				}
+			}
+		}
 		ct.completed[callID] = true
 	} else {
+		// Cap failed map to prevent unbounded growth
+		if len(ct.failed) >= maxTrackedCalls {
+			count := 0
+			for k := range ct.failed {
+				delete(ct.failed, k)
+				count++
+				if count >= maxTrackedCalls/2 {
+					break
+				}
+			}
+		}
 		ct.failed[callID] = true
 	}
 }
 
 func (ct *CallTracker) IsProcessing(callID string) bool {
-	ct.mu.Lock()
-	defer ct.mu.Unlock()
+	ct.mu.RLock()
+	defer ct.mu.RUnlock()
 	return ct.processing[callID]
 }
 
 func (ct *CallTracker) IsCompleted(callID string) bool {
-	ct.mu.Lock()
-	defer ct.mu.Unlock()
+	ct.mu.RLock()
+	defer ct.mu.RUnlock()
 	return ct.completed[callID]
 }
 
 type CallStats struct {
-	Processing     int      `json:"processing"`
-	Completed      int      `json:"completed"`
-	Failed         int      `json:"failed"`
-	ProcessingIDs  []string `json:"processing_ids"`
+	Processing    int      `json:"processing"`
+	Completed     int      `json:"completed"`
+	Failed        int      `json:"failed"`
+	ProcessingIDs []string `json:"processing_ids"`
 }
 
 func (ct *CallTracker) GetStats() CallStats {
-	ct.mu.Lock()
-	defer ct.mu.Unlock()
+	ct.mu.RLock()
+	defer ct.mu.RUnlock()
 	ids := make([]string, 0, len(ct.processing))
 	for id := range ct.processing {
 		ids = append(ids, id)

@@ -59,8 +59,8 @@ func (ls *LogStreamer) Log(level, component, message string) {
 
 	fmt.Printf("[%s] [%s] [%s] %s\n", entry.Timestamp, level, component, message)
 
-	if broadcastFn != nil {
-		broadcastFn(level, component, message)
+	if broadcastFn != nil && component != "Dashboard" {
+		go broadcastFn(level, component, message)
 	}
 }
 
