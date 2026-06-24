@@ -50,4 +50,27 @@ export const testEmail = async () => {
   return response.data;
 };
 
+// Manual call editing endpoints
+export const getCallByID = async (callID) => {
+  const response = await api.get(`/api/call/${callID}`);
+  return response.data;
+};
+
+export const updateCallManually = async (callID, transcription, summary, postToZoho = false) => {
+  const response = await api.post(`/api/call/${callID}/update-manual`, {
+    transcription,
+    summary,
+    post_to_zoho: postToZoho,
+  });
+  return response.data;
+};
+
+export const postCallToZoho = async (callID, transcription, summary) => {
+  const response = await api.post(`/api/call/${callID}/post-to-zoho`, {
+    transcription,
+    summary,
+  });
+  return response.data;
+};
+
 export default api;

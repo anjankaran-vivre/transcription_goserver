@@ -8,6 +8,7 @@ import LiveTerminal from './components/LiveTerminal';
 import CallsTable from './components/CallsTable';
 import TokenUsage from './components/TokenUsage';
 import Charts from './components/Charts';
+import ManualCallEditor from './components/ManualCallEditor';
 
 const pageVariants = {
   initial: { opacity: 0, y: 20 },
@@ -120,6 +121,7 @@ function App() {
     { id: 'dashboard', label: 'Dashboard', icon: '📊' },
     { id: 'terminal', label: 'Terminal', icon: '💻' },
     { id: 'calls', label: 'Calls', icon: '📋' },
+    { id: 'editor', label: 'Edit Call', icon: '🔧' },
     { id: 'settings', label: 'Settings', icon: '⚙️' }
   ];
 
@@ -410,6 +412,19 @@ function App() {
                 </div>
                 <CallsTable calls={calls} darkMode={darkMode} />
               </div>
+            </motion.div>
+          )}
+
+          {/* Manual Call Editor Tab */}
+          {activeTab === 'editor' && (
+            <motion.div
+              key="editor"
+              variants={pageVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+            >
+              <ManualCallEditor darkMode={darkMode} />
             </motion.div>
           )}
 

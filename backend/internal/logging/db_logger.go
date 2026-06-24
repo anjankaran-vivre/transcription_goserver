@@ -193,3 +193,41 @@ func (d *DBLogger) GetRecentLogs(limit int) []SystemLogRecord {
 	}
 	return result
 }
+
+// GetCallByID retrieves full call details by call ID
+func (d *DBLogger) GetCallByID(callID string) *CallLogRecord {
+	db := database.DB
+	var call models.CallLog
+	result := db.Where("call_id = ?", callID).First(&call)
+	
+	if result.Error != nil {
+		return nil
+	}
+
+	return &CallLogRecord{
+		Timestamp:        call.Timestamp.Format(time.RFC3339),
+		CallID:           call.CallID,
+		WorkerID:         call.WorkerID,
+		Status:           call.Status,
+		DurationSec:      call.DurationSec,
+		WordCount:        call.WordCount,
+		AudioQuality:     call.AudioQuality,
+		SummaryGenerated: call.SummaryGenerated,
+		APICalls:         call.APICalls,
+		Transcription:    call.Transcription,
+		Summary:          call.Summary,
+		ErrorMessage:     call.ErrorMessage,
+	}
+}
+
+// UpdateCallManual updates transcript and summary for a specific call
+func (d *DBLogger) UpdateCallManual(callID string, transcription string, summary string) error {
+	db := database.DB
+	return db.Model(&models.CallLog{}).
+		Where("call_id = ?", callID).
+		Updates(map[string]interface{}{
+			"transcription": transcription,
+			"summary":       summary,
+			"timestamp":     time.Now(),
+		}).Error
+}

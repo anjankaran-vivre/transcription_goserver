@@ -2,6 +2,7 @@ package config
 
 import (
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -57,8 +58,9 @@ func Load() *Config {
 	godotenv.Load()
 
 	baseDir, _ := os.Getwd()
-	logsDir := baseDir + "\\logs"
-	dataDir := baseDir + "\\data"
+	logsDir := filepath.Join(baseDir, "logs")
+	dataDir := filepath.Join(baseDir, "data")
+	tokenFile := filepath.Join(dataDir, "zoho_tokens.json")
 	os.MkdirAll(logsDir, 0755)
 	os.MkdirAll(dataDir, 0755)
 
@@ -66,7 +68,7 @@ func Load() *Config {
 		ZohoClientID:       os.Getenv("ZOHO_CLIENT_ID"),
 		ZohoClientSecret:   os.Getenv("ZOHO_CLIENT_SECRET"),
 		ZohoRedirectURI:    os.Getenv("ZOHO_REDIRECT_URI"),
-		TokenFile:          os.Getenv("HOME") + "/Vivre_Projects/transcription_goserver/backend/data/zoho_tokens.json",
+		TokenFile:          tokenFile,
 		AudioUsername:      os.Getenv("AUDIO_USERNAME"),
 		AudioPassword:      os.Getenv("AUDIO_PASSWORD"),
 		GroqAPIKey:         os.Getenv("GROQ_API_KEY"),
@@ -74,7 +76,7 @@ func Load() *Config {
 		MaxDownloadRetries: getEnvInt("MAX_DOWNLOAD_RETRIES", 2),
 		RetryInterval:      getEnvInt("RETRY_INTERVAL", 10),
 		NumWorkers:         getEnvInt("NUM_WORKERS", 2),
-		PIDFile:            dataDir + "\\server.pid",
+		PIDFile:            filepath.Join(dataDir, "server.pid"),
 		GroqDailyLimit:     getEnvInt("GROQ_DAILY_LIMIT", 14400),
 		GroqMinuteLimit:    getEnvInt("GROQ_MINUTE_LIMIT", 30),
 		Host:               getEnvStr("HOST", "127.0.0.1"),

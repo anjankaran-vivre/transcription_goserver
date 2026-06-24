@@ -74,7 +74,8 @@ func (zs *ZohoService) RefreshAccessToken() (*ZohoTokens, error) {
 	logStreamer := logging.GetLogStreamer()
 	tokens, err := zs.LoadTokens()
 	if err != nil {
-		return nil, fmt.Errorf("no refresh token found")
+		logStreamer.Error("ZohoService", "Token refresh failed: no tokens file found - re-authentication required")
+		return nil, fmt.Errorf("REAUTH_REQUIRED: no refresh token found")
 	}
 
 	url := "https://accounts.zoho.in/oauth/v2/token"
@@ -85,20 +86,47 @@ func (zs *ZohoService) RefreshAccessToken() (*ZohoTokens, error) {
 		"grant_type":    "refresh_token",
 	}
 
-	body, err := zs.postForm(url, params)
+	// Use direct HTTP post to capture status code for better error handling
+	formData := bytes.Buffer{}
+	for k, v := range params {
+		if formData.Len() > 0 {
+			formData.WriteString("&")
+		}
+		formData.WriteString(k)
+		formData.WriteString("=")
+		formData.WriteString(v)
+	}
+	
+	resp, err := http.Post(url, "application/x-www-form-urlencoded", &formData)
 	if err != nil {
-		return nil, err
+		logStreamer.Error("ZohoService", fmt.Sprintf("Token refresh request failed: %v", err))
+		return nil, fmt.Errorf("REAUTH_REQUIRED: refresh request failed - %v", err)
+	}
+	defer resp.Body.Close()
+
+	body, _ := io.ReadAll(resp.Body)
+
+	// 401 Unauthorized means refresh token is invalid/expired
+	if resp.StatusCode == http.StatusUnauthorized {
+		logStreamer.Error("ZohoService", "Token refresh failed: 401 Unauthorized - refresh token expired or invalid - re-authentication required")
+		return nil, fmt.Errorf("REAUTH_REQUIRED: refresh token invalid (401)")
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		logStreamer.Error("ZohoService", fmt.Sprintf("Token refresh failed: Status %d - %s", resp.StatusCode, string(body)))
+		return nil, fmt.Errorf("REAUTH_REQUIRED: token refresh API error %d", resp.StatusCode)
 	}
 
 	var newTokens ZohoTokens
 	if err := json.Unmarshal(body, &newTokens); err != nil {
-		return nil, fmt.Errorf("failed to parse refresh response: %v", err)
+		logStreamer.Error("ZohoService", fmt.Sprintf("Token refresh failed: invalid response - %v", err))
+		return nil, fmt.Errorf("REAUTH_REQUIRED: failed to parse refresh response - %v", err)
 	}
 	newTokens.RefreshToken = tokens.RefreshToken
 	newTokens.CreatedAt = float64(time.Now().Unix())
 
 	zs.SaveTokens(&newTokens)
-	logStreamer.Info("ZohoService", "Access token refreshed")
+	logStreamer.Info("ZohoService", "Access token refreshed successfully")
 	return &newTokens, nil
 }
 
@@ -124,7 +152,17 @@ func (zs *ZohoService) UpdateCall(callID, transcription, summary string) (bool, 
 
 	token, err := zs.GetAccessToken()
 	if err != nil {
-		logStreamer.Error("ZohoService", fmt.Sprintf("Call %s: Token error: %v", callID, err))
+		errMsg := err.Error()
+		if len(errMsg) > 100 {
+			errMsg = errMsg[:100]
+		}
+		
+		// Check if it's a re-authentication issue
+		if len(err.Error()) > 0 && err.Error()[:5] == "REAUTH" {
+			logStreamer.Error("ZohoService", fmt.Sprintf("Call %s: Zoho authentication expired - manual re-authentication required via OAuth flow", callID))
+		} else {
+			logStreamer.Error("ZohoService", fmt.Sprintf("Call %s: Token retrieval failed: %v", callID, errMsg))
+		}
 		return false, err.Error()
 	}
 
@@ -159,7 +197,7 @@ func (zs *ZohoService) UpdateCall(callID, transcription, summary string) (bool, 
 	client := &http.Client{Timeout: 30 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
-		logStreamer.Error("ZohoService", fmt.Sprintf("Call %s: Zoho error: %v", callID, err))
+		logStreamer.Error("ZohoService", fmt.Sprintf("Call %s: Zoho request error: %v", callID, err))
 		return false, err.Error()
 	}
 	defer resp.Body.Close()
@@ -171,7 +209,13 @@ func (zs *ZohoService) UpdateCall(callID, transcription, summary string) (bool, 
 
 	respBody, _ := io.ReadAll(resp.Body)
 	errorMsg := fmt.Sprintf("Status %d: %s", resp.StatusCode, string(respBody))
-	logStreamer.Error("ZohoService", fmt.Sprintf("Call %s: Zoho update failed - %s", callID, errorMsg))
+	
+	// Log 401 errors specifically as auth issues
+	if resp.StatusCode == http.StatusUnauthorized {
+		logStreamer.Error("ZohoService", fmt.Sprintf("Call %s: Zoho authentication failed (401) - refresh token likely expired - %s", callID, errorMsg))
+	} else {
+		logStreamer.Error("ZohoService", fmt.Sprintf("Call %s: Zoho update failed - %s", callID, errorMsg))
+	}
 	return false, errorMsg
 }
 

@@ -65,4 +65,79 @@ func SetupDashboardRoutes(r *gin.RouterGroup) {
 			"count":      stats["processing"],
 		})
 	})
+
+	// Manual call editing endpoints
+	r.GET("/call/:call_id", func(c *gin.Context) {
+		callID := c.Param("call_id")
+		result, err := dc.GetCallByID(callID)
+		if err != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Call not found"})
+			return
+		}
+		c.JSON(http.StatusOK, result)
+	})
+
+	r.POST("/call/:call_id/update-manual", func(c *gin.Context) {
+		callID := c.Param("call_id")
+		var req struct {
+			Transcription string `json:"transcription" binding:"required"`
+			Summary       string `json:"summary" binding:"required"`
+			PostToZoho    bool   `json:"post_to_zoho"`
+		}
+
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		// Update database
+		result, err := dc.UpdateCallManually(callID, req.Transcription, req.Summary)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, result)
+			return
+		}
+
+		// Optionally post to Zoho
+		if req.PostToZoho {
+			zohoResult, zohoErr := dc.PostToZohoManually(callID, req.Transcription, req.Summary)
+			if zohoErr != nil {
+				c.JSON(http.StatusOK, gin.H{
+					"db_updated": true,
+					"zoho_updated": false,
+					"zoho_error": zohoResult["error"],
+					"result": result,
+				})
+				return
+			}
+			c.JSON(http.StatusOK, gin.H{
+				"db_updated": true,
+				"zoho_updated": true,
+				"result": result,
+				"zoho": zohoResult,
+			})
+			return
+		}
+
+		c.JSON(http.StatusOK, result)
+	})
+
+	r.POST("/call/:call_id/post-to-zoho", func(c *gin.Context) {
+		callID := c.Param("call_id")
+		var req struct {
+			Transcription string `json:"transcription" binding:"required"`
+			Summary       string `json:"summary" binding:"required"`
+		}
+
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		result, err := dc.PostToZohoManually(callID, req.Transcription, req.Summary)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, result)
+			return
+		}
+		c.JSON(http.StatusOK, result)
+	})
 }

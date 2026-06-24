@@ -7,6 +7,7 @@ import (
 	"transcription-goserver/internal/config"
 	"transcription-goserver/internal/logging"
 	"transcription-goserver/internal/models"
+	"transcription-goserver/internal/services"
 )
 
 type DashboardController struct{}
@@ -84,4 +85,71 @@ func (dc *DashboardController) GetProcessingStats() map[string]interface{} {
 	}
 	logStreamer.Debug("Dashboard", fmt.Sprintf("Processing stats fetched"))
 	return result
+}
+
+// GetCallByID retrieves a specific call by its ID with full details
+func (dc *DashboardController) GetCallByID(callID string) (map[string]interface{}, error) {
+	logStreamer := logging.GetLogStreamer()
+	dbLogger := logging.GetDBLogger()
+
+	call := dbLogger.GetCallByID(callID)
+	if call == nil {
+		logStreamer.Warning("Dashboard", fmt.Sprintf("Call not found: %s", callID))
+		return map[string]interface{}{"error": "Call not found"}, fmt.Errorf("call not found")
+	}
+
+	logStreamer.Debug("Dashboard", fmt.Sprintf("Fetched call details: %s", callID))
+	return map[string]interface{}{
+		"call": call,
+	}, nil
+}
+
+// UpdateCallManually updates transcript and summary for a call
+func (dc *DashboardController) UpdateCallManually(callID, transcription, summary string) (map[string]interface{}, error) {
+	logStreamer := logging.GetLogStreamer()
+	dbLogger := logging.GetDBLogger()
+
+	// Validate input
+	if callID == "" {
+		return map[string]interface{}{"error": "Call ID is required"}, fmt.Errorf("call ID required")
+	}
+
+	// Update in database
+	err := dbLogger.UpdateCallManual(callID, transcription, summary)
+	if err != nil {
+		logStreamer.Error("Dashboard", fmt.Sprintf("Failed to update call %s: %v", callID, err))
+		return map[string]interface{}{"error": "Failed to update call"}, err
+	}
+
+	logStreamer.Info("Dashboard", fmt.Sprintf("Call %s updated manually - transcript and summary changed", callID))
+	return map[string]interface{}{
+		"message": "Call updated successfully",
+		"call_id": callID,
+	}, nil
+}
+
+// PostToZohoManually sends manually edited call data to Zoho
+func (dc *DashboardController) PostToZohoManually(callID, transcription, summary string) (map[string]interface{}, error) {
+	logStreamer := logging.GetLogStreamer()
+	var zs services.ZohoService
+
+	logStreamer.Info("Dashboard", fmt.Sprintf("Manual Zoho update initiated for call %s", callID))
+
+	// Update Zoho
+	success, errMsg := zs.UpdateCall(callID, transcription, summary)
+	if !success {
+		logStreamer.Error("Dashboard", fmt.Sprintf("Manual Zoho update failed for %s: %s", callID, errMsg))
+		return map[string]interface{}{
+			"success":   false,
+			"call_id":   callID,
+			"error":     errMsg,
+		}, fmt.Errorf("zoho update failed: %s", errMsg)
+	}
+
+	logStreamer.Info("Dashboard", fmt.Sprintf("Manual Zoho update successful for call %s", callID))
+	return map[string]interface{}{
+		"success": true,
+		"call_id": callID,
+		"message": "Successfully updated in Zoho CRM",
+	}, nil
 }
