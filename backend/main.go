@@ -35,11 +35,7 @@ func main() {
 	// Initialize task queue
 	controllers.InitTaskQueue(1000)
 
-	// Initialize Socket.IO
-	sio := socketio.InitSocketIO()
-	defer sio.Close()
-
-	// Connect LogStreamer to Socket.IO broadcast
+	// Connect LogStreamer to WebSocket broadcast
 	logStreamer := logging.GetLogStreamer()
 	logStreamer.SetBroadcastFunc(socketio.BroadcastLog)
 
@@ -105,7 +101,7 @@ func main() {
 	fmt.Println("  Press Ctrl+C to stop")
 	fmt.Println("=" + strings.Repeat("=", 59))
 
-	logStreamer.Info("Main", "Server started with Gin + Socket.IO")
+	logStreamer.Info("Main", "Server started with Gin + WebSocket")
 
 	// Create HTTP server
 	srv := &http.Server{
