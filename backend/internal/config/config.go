@@ -66,7 +66,7 @@ func Load() *Config {
 		ZohoClientID:       os.Getenv("ZOHO_CLIENT_ID"),
 		ZohoClientSecret:   os.Getenv("ZOHO_CLIENT_SECRET"),
 		ZohoRedirectURI:    os.Getenv("ZOHO_REDIRECT_URI"),
-		TokenFile:          dataDir + "/zoho_tokens.json",
+		TokenFile:          os.Getenv("HOME") + "/Vivre_Projects/transcription_goserver/backend/data/zoho_tokens.json",
 		AudioUsername:      os.Getenv("AUDIO_USERNAME"),
 		AudioPassword:      os.Getenv("AUDIO_PASSWORD"),
 		GroqAPIKey:         os.Getenv("GROQ_API_KEY"),
