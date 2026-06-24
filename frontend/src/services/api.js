@@ -1,9 +1,26 @@
 import axios from 'axios';
 
+// Determine the API base URL
+const getBaseURL = () => {
+  // In development, use localhost
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    return 'http://localhost:5050';
+  }
+  
+  // In production, use the same domain but assume backend is on same host
+  // This works if there's a proxy or backend is on same domain
+  const protocol = window.location.protocol;
+  const host = window.location.host;
+  return `${protocol}//${host}`;
+};
+
 const api = axios.create({
-  baseURL: '',
+  baseURL: getBaseURL(),
   timeout: 10000,
 });
+
+// Log the API base URL for debugging
+console.log('API Base URL:', getBaseURL());
 
 export const getStatus = async () => {
   const response = await api.get('/api/status');
@@ -70,6 +87,11 @@ export const postCallToZoho = async (callID, transcription, summary) => {
     transcription,
     summary,
   });
+  return response.data;
+};
+
+export const fetchCallFromZoho = async (callID) => {
+  const response = await api.post(`/api/call/${callID}/fetch-from-zoho`);
   return response.data;
 };
 

@@ -140,4 +140,15 @@ func SetupDashboardRoutes(r *gin.RouterGroup) {
 		}
 		c.JSON(http.StatusOK, result)
 	})
+
+	r.POST("/call/:call_id/fetch-from-zoho", func(c *gin.Context) {
+		callID := c.Param("call_id")
+		
+		result, err := dc.FetchCallFromZoho(callID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, result)
+			return
+		}
+		c.JSON(http.StatusOK, result)
+	})
 }

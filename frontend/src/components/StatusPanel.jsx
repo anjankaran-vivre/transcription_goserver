@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 
-function StatusPanel({ status, darkMode = true }) {
+function StatusPanel({ status, darkMode = true, wsConnected = false }) {
   if (!status) return null;
 
   const [hoveredIndex, setHoveredIndex] = useState(null);
@@ -13,6 +13,13 @@ function StatusPanel({ status, darkMode = true }) {
       icon: '🌐', 
       statusType: status.status === 'running' ? 'success' : 'error',
       glowColor: status.status === 'running' ? 'rgba(34, 197, 94, 0.4)' : 'rgba(239, 68, 68, 0.4)'
+    },
+    { 
+      label: 'WebSocket', 
+      value: wsConnected ? 'Connected' : 'Disconnected', 
+      icon: '🔌', 
+      statusType: wsConnected ? 'success' : 'error',
+      glowColor: wsConnected ? 'rgba(34, 197, 94, 0.4)' : 'rgba(239, 68, 68, 0.4)'
     },
     { 
       label: 'Uptime', 
@@ -41,13 +48,6 @@ function StatusPanel({ status, darkMode = true }) {
       icon: '💾', 
       statusType: status.memory_mb > 500 ? 'warning' : 'info',
       glowColor: status.memory_mb > 500 ? 'rgba(234, 179, 8, 0.4)' : 'rgba(59, 130, 246, 0.4)'
-    },
-    { 
-      label: 'PID', 
-      value: status.pid, 
-      icon: '🔢', 
-      statusType: 'info',
-      glowColor: 'rgba(59, 130, 246, 0.4)'
     }
   ];
 

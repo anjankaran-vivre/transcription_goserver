@@ -53,6 +53,26 @@ func HandleWS(c *gin.Context) {
 	go cl.readPump()
 }
 
+// HandleWSHTTP is an HTTP handler version of HandleWS for use outside Gin
+func HandleWSHTTP(w http.ResponseWriter, r *http.Request) {
+	conn, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		fmt.Printf("[WS] Upgrade error: %v\n", err)
+		return
+	}
+
+	cl := &client{conn: conn, send: make(chan []byte, 256)}
+	clientsMu.Lock()
+	clients[cl] = true
+	clientsMu.Unlock()
+
+	fmt.Printf("[WS] Client connected (%d total)\n", len(clients))
+	logging.GetLogStreamer().Info("WS", fmt.Sprintf("Client connected (%d total)", len(clients)))
+
+	go cl.writePump()
+	go cl.readPump()
+}
+
 func (c *client) readPump() {
 	defer func() {
 		c.conn.Close()

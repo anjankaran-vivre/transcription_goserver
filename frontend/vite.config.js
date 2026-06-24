@@ -10,10 +10,10 @@ export default defineConfig({
     port: 5063,
     host: '0.0.0.0',
     proxy: {
-      '/api':       { target: 'http://127.0.0.1:5050', changeOrigin: true },
-      '/admin':     { target: 'http://127.0.0.1:5050', changeOrigin: true },
-      '/socket.io': { target: 'http://127.0.0.1:5052', changeOrigin: true, ws: true },
-      '/health':    { target: 'http://127.0.0.1:5050', changeOrigin: true }
+      '/api':   { target: 'http://127.0.0.1:5050', changeOrigin: true },
+      '/admin': { target: 'http://127.0.0.1:5050', changeOrigin: true },
+      '/ws':    { target: 'ws://127.0.0.1:5050', changeOrigin: true, ws: true },
+      '/health': { target: 'http://127.0.0.1:5050', changeOrigin: true }
     }
   }
 })

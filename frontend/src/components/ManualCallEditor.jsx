@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { getCallByID, updateCallManually, postCallToZoho } from '../services/api';
+import { getCallByID, updateCallManually, postCallToZoho, fetchCallFromZoho } from '../services/api';
 
 export default function ManualCallEditor({ darkMode = true }) {
   const [callID, setCallID] = useState('');
@@ -17,6 +17,7 @@ export default function ManualCallEditor({ darkMode = true }) {
   
   const [updating, setUpdating] = useState(false);
   const [postingToZoho, setPostingToZoho] = useState(false);
+  const [fetchingFromZoho, setFetchingFromZoho] = useState(false);
 
   const handleFetchCall = async () => {
     if (!callID.trim()) {
@@ -46,6 +47,40 @@ export default function ManualCallEditor({ darkMode = true }) {
       setCallData(null);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleFetchFromZoho = async () => {
+    if (!callID.trim()) {
+      setError('Please enter a call ID');
+      return;
+    }
+
+    setFetchingFromZoho(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const response = await fetchCallFromZoho(callID);
+      if (response.call_id) {
+        setCallData(response);
+        setTranscript(response.transcription || '');
+        setSummary(response.summary || '');
+        setSuccess('✓ Call fetched from Zoho CRM');
+        setEditingTranscript(false);
+        setEditingSummary(false);
+      } else if (response.error) {
+        setError(response.error || 'Failed to fetch from Zoho');
+        setCallData(null);
+      } else {
+        setError('Invalid response from Zoho');
+        setCallData(null);
+      }
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to fetch from Zoho');
+      setCallData(null);
+    } finally {
+      setFetchingFromZoho(false);
     }
   };
 
@@ -144,7 +179,7 @@ export default function ManualCallEditor({ darkMode = true }) {
             value={callID}
             onChange={(e) => setCallID(e.target.value)}
             onKeyPress={(e) => e.key === 'Enter' && handleFetchCall()}
-            disabled={loading}
+            disabled={loading || fetchingFromZoho}
             className={`flex-1 px-4 py-2 rounded-lg border transition ${
               darkMode
                 ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-blue-500'
@@ -153,16 +188,29 @@ export default function ManualCallEditor({ darkMode = true }) {
           />
           <button
             onClick={handleFetchCall}
-            disabled={loading}
+            disabled={loading || fetchingFromZoho}
             className={`px-4 py-2 rounded-lg font-medium transition ${
-              loading
+              loading || fetchingFromZoho
                 ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
                 : darkMode
                 ? 'bg-blue-600 hover:bg-blue-700 text-white'
                 : 'bg-blue-500 hover:bg-blue-600 text-white'
             }`}
           >
-            {loading ? 'Fetching...' : 'Fetch'}
+            {loading ? 'Fetching...' : '📥 From DB'}
+          </button>
+          <button
+            onClick={handleFetchFromZoho}
+            disabled={loading || fetchingFromZoho}
+            className={`px-4 py-2 rounded-lg font-medium transition whitespace-nowrap ${
+              loading || fetchingFromZoho
+                ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                : darkMode
+                ? 'bg-purple-600 hover:bg-purple-700 text-white'
+                : 'bg-purple-500 hover:bg-purple-600 text-white'
+            }`}
+          >
+            {fetchingFromZoho ? 'Fetching...' : '🔍 From Zoho'}
           </button>
         </div>
 
@@ -214,6 +262,20 @@ export default function ManualCallEditor({ darkMode = true }) {
                 darkMode ? 'bg-gray-700' : 'bg-gray-100'
               }`}
             >
+              <div className="flex items-center justify-between mb-3">
+                <span className={`text-xs px-2 py-1 rounded ${
+                  callData.status === 'fetched_from_zoho' 
+                    ? 'bg-purple-600 text-white' 
+                    : 'bg-blue-600 text-white'
+                }`}>
+                  {callData.status === 'fetched_from_zoho' ? '🔍 From Zoho CRM' : '📥 From Database'}
+                </span>
+                {callData.call_url && (
+                  <a href={callData.call_url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-400 hover:underline">
+                    📞 Call Recording Link
+                  </a>
+                )}
+              </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                 <div>
                   <span className={darkMode ? 'text-gray-400' : 'text-gray-600'}>
@@ -236,7 +298,7 @@ export default function ManualCallEditor({ darkMode = true }) {
                       darkMode ? 'text-white' : 'text-gray-900'
                     }`}
                   >
-                    {callData.duration_sec.toFixed(2)}s
+                    {callData.duration_sec?.toFixed(2) || callData.duration || 'N/A'}s
                   </p>
                 </div>
                 <div>
@@ -248,7 +310,7 @@ export default function ManualCallEditor({ darkMode = true }) {
                       darkMode ? 'text-white' : 'text-gray-900'
                     }`}
                   >
-                    {callData.audio_quality}
+                    {callData.audio_quality || 'N/A'}
                   </p>
                 </div>
                 <div>
@@ -260,7 +322,7 @@ export default function ManualCallEditor({ darkMode = true }) {
                       darkMode ? 'text-white' : 'text-gray-900'
                     }`}
                   >
-                    {callData.word_count}
+                    {callData.word_count || 'N/A'}
                   </p>
                 </div>
               </div>

@@ -33,7 +33,17 @@ function App() {
   const [actionLoading, setActionLoading] = useState(null);
   const [notification, setNotification] = useState(null);
 
-  const { isConnected, logs, clearLogs } = useWebSocket('http://localhost:5050');
+  // Determine API URL (same logic as api.js)
+  const getAPIUrl = () => {
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      return 'http://localhost:5050';
+    }
+    const protocol = window.location.protocol;
+    const host = window.location.host;
+    return `${protocol}//${host}`;
+  };
+
+  const { isConnected, logs, clearLogs } = useWebSocket(getAPIUrl());
 
   const fetchData = useCallback(async () => {
     try {
@@ -342,7 +352,7 @@ function App() {
               className="space-y-6"
             >
               <motion.div variants={pageVariants}>
-                <StatusPanel status={status} darkMode={darkMode} />
+                <StatusPanel status={status} darkMode={darkMode} wsConnected={isConnected} />
               </motion.div>
               
               <motion.div variants={pageVariants}>

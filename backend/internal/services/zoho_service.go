@@ -247,3 +247,59 @@ func (zs *ZohoService) postForm(url string, params map[string]string) ([]byte, e
 
 	return body, nil
 }
+
+// FetchCallFromZoho retrieves call details from Zoho CRM by call ID
+// Returns map with call data including URL, transcription, summary, etc.
+func (zs *ZohoService) FetchCallFromZoho(callID string) (map[string]interface{}, error) {
+	logStreamer := logging.GetLogStreamer()
+
+	token, err := zs.GetAccessToken()
+	if err != nil {
+		logStreamer.Error("ZohoService", fmt.Sprintf("Call %s: Failed to get access token: %v", callID, err))
+		return nil, fmt.Errorf("REAUTH_REQUIRED: %v", err)
+	}
+
+	// Fetch call record from Zoho CRM
+	url := fmt.Sprintf("https://www.zohoapis.in/crm/v2/Calls/%s", callID)
+	
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		logStreamer.Error("ZohoService", fmt.Sprintf("Call %s: Request creation failed: %v", callID, err))
+		return nil, err
+	}
+
+	req.Header.Set("Authorization", "Zoho-oauthtoken "+token)
+
+	client := &http.Client{Timeout: 30 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		logStreamer.Error("ZohoService", fmt.Sprintf("Call %s: Zoho API request failed: %v", callID, err))
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusUnauthorized {
+		logStreamer.Error("ZohoService", fmt.Sprintf("Call %s: Zoho auth failed (401) - re-authentication required", callID))
+		return nil, fmt.Errorf("REAUTH_REQUIRED: 401 Unauthorized")
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		logStreamer.Error("ZohoService", fmt.Sprintf("Call %s: Zoho fetch failed - Status %d: %s", callID, resp.StatusCode, string(body)))
+		return nil, fmt.Errorf("status %d: %s", resp.StatusCode, string(body))
+	}
+
+	var response map[string]interface{}
+	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+		logStreamer.Error("ZohoService", fmt.Sprintf("Call %s: Failed to parse Zoho response: %v", callID, err))
+		return nil, err
+	}
+
+	// Extract call data from response
+	if data, ok := response["data"].(map[string]interface{}); ok {
+		logStreamer.Info("ZohoService", fmt.Sprintf("Call %s: Fetched from Zoho successfully", callID))
+		return data, nil
+	}
+
+	return nil, fmt.Errorf("invalid response format from Zoho")
+}

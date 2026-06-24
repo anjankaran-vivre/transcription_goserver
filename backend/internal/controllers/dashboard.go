@@ -153,3 +153,59 @@ func (dc *DashboardController) PostToZohoManually(callID, transcription, summary
 		"message": "Successfully updated in Zoho CRM",
 	}, nil
 }
+
+// FetchCallFromZoho fetches call details from Zoho CRM and processes it
+func (dc *DashboardController) FetchCallFromZoho(callID string) (map[string]interface{}, error) {
+	logStreamer := logging.GetLogStreamer()
+	var zs services.ZohoService
+
+	if callID == "" {
+		return map[string]interface{}{"error": "Call ID is required"}, fmt.Errorf("call ID required")
+	}
+
+	logStreamer.Info("Dashboard", fmt.Sprintf("Fetching call %s from Zoho CRM", callID))
+
+	// Fetch from Zoho
+	callData, err := zs.FetchCallFromZoho(callID)
+	if err != nil {
+		errMsg := err.Error()
+		logStreamer.Error("Dashboard", fmt.Sprintf("Failed to fetch call %s from Zoho: %s", callID, errMsg))
+		return map[string]interface{}{
+			"success": false,
+			"call_id": callID,
+			"error":   errMsg,
+		}, err
+	}
+
+	// Extract relevant fields from Zoho response
+	zohoCall := map[string]interface{}{
+		"call_id":        callID,
+		"phone_number":   "",
+		"duration":       0,
+		"call_url":       "",
+		"transcription":  "",
+		"summary":        "",
+		"status":         "fetched_from_zoho",
+		"zoho_raw":       callData,
+	}
+
+	// Map Zoho fields to our structure
+	if phone, ok := callData["Phone"].(string); ok {
+		zohoCall["phone_number"] = phone
+	}
+	if duration, ok := callData["Call_Duration_c"].(float64); ok {
+		zohoCall["duration"] = int(duration)
+	}
+	if url, ok := callData["Call_Recording_URL_c"].(string); ok {
+		zohoCall["call_url"] = url
+	}
+	if transcript, ok := callData["Transcription_c"].(string); ok {
+		zohoCall["transcription"] = transcript
+	}
+	if summary, ok := callData["Summary_c"].(string); ok {
+		zohoCall["summary"] = summary
+	}
+
+	logStreamer.Info("Dashboard", fmt.Sprintf("Successfully fetched call %s from Zoho", callID))
+	return zohoCall, nil
+}
