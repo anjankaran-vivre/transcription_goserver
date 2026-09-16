@@ -40,13 +40,11 @@ func (dc *DashboardController) GetMetrics() MetricsResponse {
 	callStats := callTracker.GetStats()
 	dbStats := dbLogger.GetStatsFromLogs()
 	todayStats := metrics.GetTodayStats()
-	rateLimit := metrics.GetRateLimitStatus()
 
 	return MetricsResponse{
 		Realtime:   callStats,
 		Historical: dbStats,
 		Today:      todayStats,
-		RateLimit:  rateLimit,
 	}
 }
 

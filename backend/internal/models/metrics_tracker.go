@@ -3,8 +3,6 @@ package models
 import (
 	"sync"
 	"time"
-
-	"transcription-goserver/internal/config"
 )
 
 type MetricsTracker struct {
@@ -85,42 +83,5 @@ func (mt *MetricsTracker) GetTodayStats() TodayStats {
 		TotalTranscriptions: mt.totalTranscriptions,
 		TotalSummaries:     mt.totalSummaries,
 		TotalErrors:        mt.totalErrors,
-	}
-}
-
-type RateLimitStatus struct {
-	DailyUsed       int     `json:"daily_used"`
-	DailyLimit      int     `json:"daily_limit"`
-	DailyPercentage float64 `json:"daily_percentage"`
-	MinuteUsed      int     `json:"minute_used"`
-	MinuteLimit     int     `json:"minute_limit"`
-	MinutePercentage float64 `json:"minute_percentage"`
-}
-
-func (mt *MetricsTracker) GetRateLimitStatus() RateLimitStatus {
-	mt.mu.Lock()
-	defer mt.mu.Unlock()
-
-	today := time.Now().Format("2006-01-02")
-	dailyUsed := mt.dailyAPICalls[today]
-	minuteUsed := len(mt.minuteCalls)
-
-	dailyLimit := config.Settings.GroqDailyLimit
-	minuteLimit := config.Settings.GroqMinuteLimit
-
-	if dailyLimit <= 0 {
-		dailyLimit = 1
-	}
-	if minuteLimit <= 0 {
-		minuteLimit = 1
-	}
-
-	return RateLimitStatus{
-		DailyUsed:        dailyUsed,
-		DailyLimit:       config.Settings.GroqDailyLimit,
-		DailyPercentage:  float64(dailyUsed) / float64(dailyLimit) * 100,
-		MinuteUsed:       minuteUsed,
-		MinuteLimit:      config.Settings.GroqMinuteLimit,
-		MinutePercentage: float64(minuteUsed) / float64(minuteLimit) * 100,
 	}
 }

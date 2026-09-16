@@ -27,7 +27,6 @@ type MetricsResponse struct {
 	Realtime  interface{} `json:"realtime"`
 	Historical interface{} `json:"historical"`
 	Today     interface{} `json:"today"`
-	RateLimit interface{} `json:"rate_limit"`
 }
 
 // Admin

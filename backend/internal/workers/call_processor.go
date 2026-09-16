@@ -91,24 +91,41 @@ func processCall(job controllers.Job, workerID int) {
 		return
 	}
 
-	// 2. Transcribe with Groq
-	var gs services.GroqService
-	transcript, status, _, apiCalls := gs.TranscribeAudio(audioFile, callID)
+	// 2. Transcribe with OpenRouter
+	var ors services.OpenRouterService
+	transcript, status, _, apiCalls := ors.TranscribeAudio(audioFile, callID)
 	totalAPICalls += apiCalls
 
 	// 3. Default values
 	audioQuality := "good"
 	summaryGenerated := false
 	summary := ""
+	skipZohoUpdate := false
 
-	// 4. Generate Summary based on status
-	if status == "success" && len(strings.Fields(transcript)) >= 10 {
-		summary, summaryGenerated = gs.GenerateSummary(transcript, callID)
-		if summaryGenerated {
+	// 4. Translate to English and generate summary based on status
+	if status == "success" {
+		englishTranscript, englishSummary, postProcessingGenerated := ors.TranslateAndSummarizeTranscript(transcript, callID)
+		if postProcessingGenerated {
+			transcript = englishTranscript
+			summary = englishSummary
+			summaryGenerated = true
 			totalAPICalls++
+		} else {
+			logStreamer.Warning("Worker", fmt.Sprintf("Call %s: English translation/summary failed; skipping Zoho update to avoid saving original transcript", callID))
+			transcript = "English translation/summary failed; original transcript withheld"
+			summary = "PURPOSE: Translation/summary failed\nOUTCOME: Zoho update skipped to avoid saving non-English transcript"
+			audioQuality = "translation_failed"
+			status = "translation_failed"
+			skipZohoUpdate = true
 		}
-	} else if status == "success" {
-		summary = "PURPOSE: Brief conversation\nOUTCOME: Limited content for summary"
+	}
+
+	if status == "success" {
+		if summary == "" && len(strings.Fields(transcript)) < 10 {
+			summary = "PURPOSE: Brief conversation\nOUTCOME: Limited content for summary"
+		}
+	} else if status == "translation_failed" {
+		// Keep the withheld transcript/summary set above and skip Zoho update.
 	} else if status == "no_speech" {
 		transcript = "No clear speech detected in recording"
 		summary = "PURPOSE: No speech detected\nOUTCOME: Recording appears silent or empty"
@@ -126,10 +143,14 @@ func processCall(job controllers.Job, workerID int) {
 	}
 
 	// 5. Update Zoho CRM
-	var zs services.ZohoService
-	zohoSuccess, zohoErr := zs.UpdateCall(callID, transcript, summary)
-	if !zohoSuccess {
-		logStreamer.Warning("Worker", fmt.Sprintf("Call %s: Zoho update failed (but transcription ok): %s", callID, zohoErr))
+	if skipZohoUpdate {
+		logStreamer.Warning("Worker", fmt.Sprintf("Call %s: Zoho update skipped because English translation failed", callID))
+	} else {
+		var zs services.ZohoService
+		zohoSuccess, zohoErr := zs.UpdateCall(callID, transcript, summary)
+		if !zohoSuccess {
+			logStreamer.Warning("Worker", fmt.Sprintf("Call %s: Zoho update failed (but transcription ok): %s", callID, zohoErr))
+		}
 	}
 
 	// 6. Log to DB

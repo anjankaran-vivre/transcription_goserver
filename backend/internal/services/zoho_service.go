@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
+	"strings"
 	"time"
 
 	"transcription-goserver/internal/config"
@@ -25,15 +27,18 @@ type ZohoTokens struct {
 	CreatedAt    float64 `json:"created_at"`
 }
 
-func (zs *ZohoService) SaveTokens(tokens *ZohoTokens) {
+func (zs *ZohoService) SaveTokens(tokens *ZohoTokens) error {
 	data, _ := json.Marshal(tokens)
-	os.WriteFile(config.Settings.TokenFile, data, 0644)
+	if err := os.WriteFile(config.Settings.TokenFile, data, 0644); err != nil {
+		return fmt.Errorf("failed to save tokens to %s: %w", config.Settings.TokenFile, err)
+	}
+	return nil
 }
 
 func (zs *ZohoService) LoadTokens() (*ZohoTokens, error) {
 	data, err := os.ReadFile(config.Settings.TokenFile)
 	if err != nil {
-		return nil, fmt.Errorf("no tokens file found")
+		return nil, fmt.Errorf("no tokens file found at %s", config.Settings.TokenFile)
 	}
 	var tokens ZohoTokens
 	if err := json.Unmarshal(data, &tokens); err != nil {
@@ -65,7 +70,9 @@ func (zs *ZohoService) GenerateAccessToken(grantCode string) error {
 	}
 	tokens.CreatedAt = float64(time.Now().Unix())
 
-	zs.SaveTokens(&tokens)
+	if err := zs.SaveTokens(&tokens); err != nil {
+		return err
+	}
 	logStreamer.Info("ZohoService", "Access token saved")
 	return nil
 }
@@ -86,17 +93,8 @@ func (zs *ZohoService) RefreshAccessToken() (*ZohoTokens, error) {
 		"grant_type":    "refresh_token",
 	}
 
-	// Use direct HTTP post to capture status code for better error handling
-	formData := bytes.Buffer{}
-	for k, v := range params {
-		if formData.Len() > 0 {
-			formData.WriteString("&")
-		}
-		formData.WriteString(k)
-		formData.WriteString("=")
-		formData.WriteString(v)
-	}
-	
+	formData := formValues(params)
+
 	resp, err := http.Post(url, "application/x-www-form-urlencoded", &formData)
 	if err != nil {
 		logStreamer.Error("ZohoService", fmt.Sprintf("Token refresh request failed: %v", err))
@@ -125,7 +123,9 @@ func (zs *ZohoService) RefreshAccessToken() (*ZohoTokens, error) {
 	newTokens.RefreshToken = tokens.RefreshToken
 	newTokens.CreatedAt = float64(time.Now().Unix())
 
-	zs.SaveTokens(&newTokens)
+	if err := zs.SaveTokens(&newTokens); err != nil {
+		return nil, err
+	}
 	logStreamer.Info("ZohoService", "Access token refreshed successfully")
 	return &newTokens, nil
 }
@@ -133,7 +133,7 @@ func (zs *ZohoService) RefreshAccessToken() (*ZohoTokens, error) {
 func (zs *ZohoService) GetAccessToken() (string, error) {
 	tokens, err := zs.LoadTokens()
 	if err != nil {
-		return "", fmt.Errorf("no tokens found")
+		return "", err
 	}
 
 	if float64(time.Now().Unix())-tokens.CreatedAt > 3500 {
@@ -156,9 +156,9 @@ func (zs *ZohoService) UpdateCall(callID, transcription, summary string) (bool, 
 		if len(errMsg) > 100 {
 			errMsg = errMsg[:100]
 		}
-		
+
 		// Check if it's a re-authentication issue
-		if len(err.Error()) > 0 && err.Error()[:5] == "REAUTH" {
+		if strings.HasPrefix(err.Error(), "REAUTH") {
 			logStreamer.Error("ZohoService", fmt.Sprintf("Call %s: Zoho authentication expired - manual re-authentication required via OAuth flow", callID))
 		} else {
 			logStreamer.Error("ZohoService", fmt.Sprintf("Call %s: Token retrieval failed: %v", callID, errMsg))
@@ -209,7 +209,7 @@ func (zs *ZohoService) UpdateCall(callID, transcription, summary string) (bool, 
 
 	respBody, _ := io.ReadAll(resp.Body)
 	errorMsg := fmt.Sprintf("Status %d: %s", resp.StatusCode, string(respBody))
-	
+
 	// Log 401 errors specifically as auth issues
 	if resp.StatusCode == http.StatusUnauthorized {
 		logStreamer.Error("ZohoService", fmt.Sprintf("Call %s: Zoho authentication failed (401) - refresh token likely expired - %s", callID, errorMsg))
@@ -220,15 +220,7 @@ func (zs *ZohoService) UpdateCall(callID, transcription, summary string) (bool, 
 }
 
 func (zs *ZohoService) postForm(url string, params map[string]string) ([]byte, error) {
-	formData := bytes.Buffer{}
-	for k, v := range params {
-		if formData.Len() > 0 {
-			formData.WriteString("&")
-		}
-		formData.WriteString(k)
-		formData.WriteString("=")
-		formData.WriteString(v)
-	}
+	formData := formValues(params)
 
 	resp, err := http.Post(url, "application/x-www-form-urlencoded", &formData)
 	if err != nil {
@@ -248,6 +240,14 @@ func (zs *ZohoService) postForm(url string, params map[string]string) ([]byte, e
 	return body, nil
 }
 
+func formValues(params map[string]string) bytes.Buffer {
+	values := url.Values{}
+	for k, v := range params {
+		values.Set(k, v)
+	}
+	return *bytes.NewBufferString(values.Encode())
+}
+
 // FetchCallFromZoho retrieves call details from Zoho CRM by call ID
 // Returns map with call data including URL, transcription, summary, etc.
 func (zs *ZohoService) FetchCallFromZoho(callID string) (map[string]interface{}, error) {
@@ -261,7 +261,7 @@ func (zs *ZohoService) FetchCallFromZoho(callID string) (map[string]interface{},
 
 	// Fetch call record from Zoho CRM
 	url := fmt.Sprintf("https://www.zohoapis.in/crm/v2/Calls/%s", callID)
-	
+
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		logStreamer.Error("ZohoService", fmt.Sprintf("Call %s: Request creation failed: %v", callID, err))
@@ -296,6 +296,12 @@ func (zs *ZohoService) FetchCallFromZoho(callID string) (map[string]interface{},
 	}
 
 	// Extract call data from response
+	if data, ok := response["data"].([]interface{}); ok && len(data) > 0 {
+		if record, ok := data[0].(map[string]interface{}); ok {
+			logStreamer.Info("ZohoService", fmt.Sprintf("Call %s: Fetched from Zoho successfully", callID))
+			return record, nil
+		}
+	}
 	if data, ok := response["data"].(map[string]interface{}); ok {
 		logStreamer.Info("ZohoService", fmt.Sprintf("Call %s: Fetched from Zoho successfully", callID))
 		return data, nil
