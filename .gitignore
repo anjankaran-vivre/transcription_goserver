@@ -1,5 +1,4 @@
 .env
-data\
 data
 logs
 dist
@@ -7,3 +6,4 @@ build
 node_modules
 server.exe
 *.exe
+backend/data
