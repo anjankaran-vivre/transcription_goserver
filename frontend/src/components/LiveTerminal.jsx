@@ -16,6 +16,7 @@ function LiveTerminal({ logs, clearLogs, darkMode, isConnected }) {
 
   // Filter logs
   const filteredLogs = logs.filter(log => {
+    if (log.level?.toUpperCase() === 'DEBUG') return false;
     if (filter === 'all') return true;
     return log.level?.toLowerCase() === filter;
   });
@@ -105,7 +106,6 @@ function LiveTerminal({ logs, clearLogs, darkMode, isConnected }) {
               <option value="error">Errors</option>
               <option value="warning">Warnings</option>
               <option value="info">Info</option>
-              <option value="debug">Debug</option>
             </select>
 
             {/* Auto-scroll toggle */}
