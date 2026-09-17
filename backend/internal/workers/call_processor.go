@@ -84,7 +84,7 @@ func processCall(job controllers.Job, workerID int) {
 	var errorMsg string
 	audioFile, success, errorMsg = as.DownloadAudio(recURL, callID, workerID)
 	if !success {
-		logging.GetDBLogger().LogCall(callID, workerID, "download_failed", 0, 0, "", false, 0, "", "", errorMsg)
+		logging.GetDBLogger().LogCall(callID, workerID, "download_failed", 0, 0, "", false, 0, "", "", "", errorMsg)
 		var es services.EmailService
 		es.SendFailureAlert(callID, errorMsg, "Download Failed")
 		callTracker.MarkCompleted(callID, false)
@@ -93,7 +93,10 @@ func processCall(job controllers.Job, workerID int) {
 
 	// 2. Transcribe with OpenRouter
 	var ors services.OpenRouterService
-	transcript, status, _, apiCalls := ors.TranscribeAudio(audioFile, callID)
+	transcript, status, rawTranscript, apiCalls := ors.TranscribeAudio(audioFile, callID)
+	if strings.TrimSpace(rawTranscript) == "" {
+		rawTranscript = transcript
+	}
 	totalAPICalls += apiCalls
 
 	// 3. Default values
@@ -163,7 +166,7 @@ func processCall(job controllers.Job, workerID int) {
 	logging.GetDBLogger().LogCall(
 		callID, workerID, status, duration, wordCount,
 		audioQuality, summaryGenerated, totalAPICalls,
-		truncateString(transcript, 1000), summary, "",
+		rawTranscript, truncateString(transcript, 1000), summary, "",
 	)
 
 	callTracker.MarkCompleted(callID, true)

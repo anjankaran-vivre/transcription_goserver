@@ -55,6 +55,13 @@ WHERE OBJECT_NAME(i.object_id) = 'call_logs'
   AND i.name IS NOT NULL;
 EXEC sp_executesql @sql;`)
 
-	
+	if err := DB.Exec(`
+IF COL_LENGTH('call_logs', 'raw_transcription') IS NULL
+BEGIN
+    ALTER TABLE call_logs ADD raw_transcription NVARCHAR(MAX) NULL;
+END;`).Error; err != nil {
+		log.Fatalf("Failed to add call_logs.raw_transcription column: %v", err)
+	}
+
 	log.Println("✅ Database tables initialized")
 }

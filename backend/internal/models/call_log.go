@@ -17,6 +17,7 @@ type CallLog struct {
 	AudioQuality     string    `gorm:"column:audio_quality;size:50;not null" json:"audio_quality"`
 	SummaryGenerated bool      `gorm:"column:summary_generated;not null" json:"summary_generated"`
 	APICalls         int       `gorm:"column:api_calls;not null" json:"api_calls"`
+	RawTranscription string    `gorm:"column:raw_transcription;type:text" json:"raw_transcription"`
 	Transcription    string    `gorm:"type:text" json:"transcription"`
 	Summary          string    `gorm:"type:text" json:"summary"`
 	ErrorMessage     string    `gorm:"column:error_message;type:text" json:"error_message"`

@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"transcription-goserver/internal/controllers"
+	"transcription-goserver/internal/services"
 )
 
 func SetupDashboardRoutes(r *gin.RouterGroup) {
@@ -102,18 +103,18 @@ func SetupDashboardRoutes(r *gin.RouterGroup) {
 			zohoResult, zohoErr := dc.PostToZohoManually(callID, req.Transcription, req.Summary)
 			if zohoErr != nil {
 				c.JSON(http.StatusOK, gin.H{
-					"db_updated": true,
+					"db_updated":   true,
 					"zoho_updated": false,
-					"zoho_error": zohoResult["error"],
-					"result": result,
+					"zoho_error":   zohoResult["error"],
+					"result":       result,
 				})
 				return
 			}
 			c.JSON(http.StatusOK, gin.H{
-				"db_updated": true,
+				"db_updated":   true,
 				"zoho_updated": true,
-				"result": result,
-				"zoho": zohoResult,
+				"result":       result,
+				"zoho":         zohoResult,
 			})
 			return
 		}
@@ -143,8 +144,64 @@ func SetupDashboardRoutes(r *gin.RouterGroup) {
 
 	r.POST("/call/:call_id/fetch-from-zoho", func(c *gin.Context) {
 		callID := c.Param("call_id")
-		
+
 		result, err := dc.FetchCallFromZoho(callID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, result)
+			return
+		}
+		c.JSON(http.StatusOK, result)
+	})
+
+	r.POST("/call/:call_id/download-audio", func(c *gin.Context) {
+		callID := c.Param("call_id")
+		var req struct {
+			CallURL string `json:"call_url" binding:"required"`
+		}
+
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		result, err := dc.DownloadCallAudio(callID, req.CallURL)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, result)
+			return
+		}
+		c.JSON(http.StatusOK, result)
+	})
+
+	r.GET("/call/:call_id/audio", func(c *gin.Context) {
+		callID := c.Param("call_id")
+		audioFile, ok := services.GetManualAudioPath(callID)
+		if !ok {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Audio cache not found"})
+			return
+		}
+
+		c.Header("Cache-Control", "no-store")
+		c.File(audioFile)
+	})
+
+	r.DELETE("/call/:call_id/audio-cache", func(c *gin.Context) {
+		callID := c.Param("call_id")
+		result := dc.CleanupCallAudioCache(callID)
+		c.JSON(http.StatusOK, result)
+	})
+
+	r.POST("/call/:call_id/resend-transcription", func(c *gin.Context) {
+		callID := c.Param("call_id")
+		var req struct {
+			CallURL string `json:"call_url" binding:"required"`
+		}
+
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		result, err := dc.ResendCallForTranscription(callID, req.CallURL)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, result)
 			return

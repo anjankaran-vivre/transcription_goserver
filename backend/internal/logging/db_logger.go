@@ -23,7 +23,7 @@ func GetDBLogger() *DBLogger {
 }
 
 func (d *DBLogger) LogCall(callID string, workerID int, status string, duration float64, wordCount int,
-	audioQuality string, summaryGenerated bool, apiCalls int, transcription string, summary string, errorMsg string) {
+	audioQuality string, summaryGenerated bool, apiCalls int, rawTranscription string, transcription string, summary string, errorMsg string) {
 
 	entry := models.CallLog{
 		Timestamp:        time.Now(),
@@ -35,6 +35,7 @@ func (d *DBLogger) LogCall(callID string, workerID int, status string, duration 
 		AudioQuality:     audioQuality,
 		SummaryGenerated: summaryGenerated,
 		APICalls:         apiCalls,
+		RawTranscription: rawTranscription,
 		Transcription:    transcription,
 		Summary:          summary,
 		ErrorMessage:     errorMsg,
@@ -53,6 +54,7 @@ func (d *DBLogger) LogCall(callID string, workerID int, status string, duration 
 		existing.AudioQuality = audioQuality
 		existing.SummaryGenerated = summaryGenerated
 		existing.APICalls = apiCalls
+		existing.RawTranscription = rawTranscription
 		existing.Transcription = transcription
 		existing.Summary = summary
 		existing.ErrorMessage = errorMsg
@@ -88,6 +90,34 @@ func (d *DBLogger) LogSystem(level, component, message string, threadID string) 
 	}
 }
 
+func (d *DBLogger) UpdateManualAIResult(callID, rawTranscription, transcription, summary string) error {
+	db := database.DB
+	var call models.CallLog
+	result := db.Where("call_id = ?", callID).First(&call)
+	if result.Error != nil {
+		call = models.CallLog{
+			Timestamp:        time.Now(),
+			CallID:           callID,
+			Status:           "manual_transcription",
+			AudioQuality:     "good",
+			SummaryGenerated: true,
+			RawTranscription: rawTranscription,
+			Transcription:    transcription,
+			Summary:          summary,
+		}
+		return db.Create(&call).Error
+	}
+
+	return db.Model(&call).Updates(map[string]interface{}{
+		"timestamp":         time.Now(),
+		"status":            "manual_transcription",
+		"summary_generated": true,
+		"raw_transcription": rawTranscription,
+		"transcription":     transcription,
+		"summary":           summary,
+	}).Error
+}
+
 type CallStatsData struct {
 	TotalCalls      int     `json:"total_calls"`
 	SuccessfulCalls int     `json:"successful_calls"`
@@ -120,18 +150,19 @@ func (d *DBLogger) GetStatsFromLogs() CallStatsData {
 }
 
 type CallLogRecord struct {
-	Timestamp        string `json:"timestamp"`
-	CallID           string `json:"call_id"`
-	WorkerID         int    `json:"worker_id"`
-	Status           string `json:"status"`
+	Timestamp        string  `json:"timestamp"`
+	CallID           string  `json:"call_id"`
+	WorkerID         int     `json:"worker_id"`
+	Status           string  `json:"status"`
 	DurationSec      float64 `json:"duration_sec"`
-	WordCount        int    `json:"word_count"`
-	AudioQuality     string `json:"audio_quality"`
-	SummaryGenerated bool   `json:"summary_generated"`
-	APICalls         int    `json:"api_calls"`
-	Transcription    string `json:"transcription"`
-	Summary          string `json:"summary"`
-	ErrorMessage     string `json:"error_message"`
+	WordCount        int     `json:"word_count"`
+	AudioQuality     string  `json:"audio_quality"`
+	SummaryGenerated bool    `json:"summary_generated"`
+	APICalls         int     `json:"api_calls"`
+	RawTranscription string  `json:"raw_transcription"`
+	Transcription    string  `json:"transcription"`
+	Summary          string  `json:"summary"`
+	ErrorMessage     string  `json:"error_message"`
 }
 
 func (d *DBLogger) GetRecentCalls(limit int) []CallLogRecord {
@@ -160,6 +191,7 @@ func (d *DBLogger) GetRecentCalls(limit int) []CallLogRecord {
 			AudioQuality:     c.AudioQuality,
 			SummaryGenerated: c.SummaryGenerated,
 			APICalls:         c.APICalls,
+			RawTranscription: c.RawTranscription,
 			Transcription:    transcription,
 			Summary:          summary,
 			ErrorMessage:     c.ErrorMessage,
@@ -199,7 +231,7 @@ func (d *DBLogger) GetCallByID(callID string) *CallLogRecord {
 	db := database.DB
 	var call models.CallLog
 	result := db.Where("call_id = ?", callID).First(&call)
-	
+
 	if result.Error != nil {
 		return nil
 	}
@@ -214,6 +246,7 @@ func (d *DBLogger) GetCallByID(callID string) *CallLogRecord {
 		AudioQuality:     call.AudioQuality,
 		SummaryGenerated: call.SummaryGenerated,
 		APICalls:         call.APICalls,
+		RawTranscription: call.RawTranscription,
 		Transcription:    call.Transcription,
 		Summary:          call.Summary,
 		ErrorMessage:     call.ErrorMessage,

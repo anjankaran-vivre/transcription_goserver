@@ -95,4 +95,28 @@ export const fetchCallFromZoho = async (callID) => {
   return response.data;
 };
 
+export const downloadCallAudio = async (callID, callURL) => {
+  const response = await api.post(`/api/call/${callID}/download-audio`, {
+    call_url: callURL,
+  }, { timeout: 130000 });
+  return {
+    ...response.data,
+    audio_url: response.data.audio_url
+      ? `${getBaseURL()}${response.data.audio_url}?t=${Date.now()}`
+      : '',
+  };
+};
+
+export const clearCallAudioCache = async (callID) => {
+  const response = await api.delete(`/api/call/${callID}/audio-cache`);
+  return response.data;
+};
+
+export const resendCallForTranscription = async (callID, callURL) => {
+  const response = await api.post(`/api/call/${callID}/resend-transcription`, {
+    call_url: callURL,
+  }, { timeout: 450000 });
+  return response.data;
+};
+
 export default api;

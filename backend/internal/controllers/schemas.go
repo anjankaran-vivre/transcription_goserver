@@ -14,19 +14,19 @@ type TranscriptionResponse struct {
 
 // Status & Metrics
 type StatusResponse struct {
-	Status    string  `json:"status"`
-	Uptime    string  `json:"uptime"`
-	Workers   int     `json:"workers"`
-	QueueSize int     `json:"queue_size"`
-	MemoryMB  float64 `json:"memory_mb"`
+	Status     string  `json:"status"`
+	Uptime     string  `json:"uptime"`
+	Workers    int     `json:"workers"`
+	QueueSize  int     `json:"queue_size"`
+	MemoryMB   float64 `json:"memory_mb"`
 	CPUPercent float64 `json:"cpu_percent"`
-	PID       int     `json:"pid"`
+	PID        int     `json:"pid"`
 }
 
 type MetricsResponse struct {
-	Realtime  interface{} `json:"realtime"`
+	Realtime   interface{} `json:"realtime"`
 	Historical interface{} `json:"historical"`
-	Today     interface{} `json:"today"`
+	Today      interface{} `json:"today"`
 }
 
 // Admin
@@ -38,18 +38,19 @@ type AdminResponse struct {
 
 // DB Models (for API)
 type CallLogRecord struct {
-	Timestamp        string `json:"timestamp"`
-	CallID           string `json:"call_id"`
-	WorkerID         int    `json:"worker_id"`
-	Status           string `json:"status"`
+	Timestamp        string  `json:"timestamp"`
+	CallID           string  `json:"call_id"`
+	WorkerID         int     `json:"worker_id"`
+	Status           string  `json:"status"`
 	DurationSec      float64 `json:"duration_sec"`
-	WordCount        int    `json:"word_count"`
-	AudioQuality     string `json:"audio_quality"`
-	SummaryGenerated bool   `json:"summary_generated"`
-	APICalls         int    `json:"api_calls"`
-	Transcription    string `json:"transcription"`
-	Summary          string `json:"summary"`
-	ErrorMessage     string `json:"error_message"`
+	WordCount        int     `json:"word_count"`
+	AudioQuality     string  `json:"audio_quality"`
+	SummaryGenerated bool    `json:"summary_generated"`
+	APICalls         int     `json:"api_calls"`
+	RawTranscription string  `json:"raw_transcription"`
+	Transcription    string  `json:"transcription"`
+	Summary          string  `json:"summary"`
+	ErrorMessage     string  `json:"error_message"`
 }
 
 type SystemLogRecord struct {
