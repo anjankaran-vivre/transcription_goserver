@@ -26,9 +26,10 @@ function Charts({ calls = [], darkMode = true }) {
       return acc;
     }, {});
 
-    const statusData = Object.entries(statusCounts).map(([name, value]) => ({
-      name: name.charAt(0).toUpperCase() + name.slice(1).replace('_', ' '),
-      value
+    const statusData = Object.entries(statusCounts).map(([status, value]) => ({
+      status,
+      name: status.charAt(0).toUpperCase() + status.slice(1).replaceAll('_', ' '),
+      value,
     }));
 
     const hourlyData = [];
@@ -81,7 +82,17 @@ function Charts({ calls = [], darkMode = true }) {
     );
   }
 
-  const COLORS = ['#22c55e', '#ef4444', '#eab308', '#f97316', '#3b82f6', '#8b5cf6'];
+  const getStatusColor = (status) => {
+    const normalized = status?.toLowerCase() || 'unknown';
+
+    if (normalized === 'success') return '#22c55e';
+    if (normalized.includes('failed') || normalized === 'error') return '#ef4444';
+    if (normalized === 'no_speech') return '#eab308';
+    if (normalized === 'unclear_audio') return '#f97316';
+    if (normalized === 'manual_transcription') return '#3b82f6';
+    if (normalized === 'processing') return '#06b6d4';
+    return '#64748b';
+  };
 
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
@@ -198,10 +209,10 @@ function Charts({ calls = [], darkMode = true }) {
               paddingAngle={5}
               dataKey="value"
             >
-              {chartData.statusData.map((entry, index) => (
+              {chartData.statusData.map((entry) => (
                 <Cell 
-                  key={`cell-${index}`} 
-                  fill={COLORS[index % COLORS.length]}
+                  key={`cell-${entry.status}`}
+                  fill={getStatusColor(entry.status)}
                   className="transition-all duration-300 hover:opacity-80"
                 />
               ))}
